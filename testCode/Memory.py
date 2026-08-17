@@ -2,7 +2,7 @@ import chromadb
 import numpy as np
 import chromadb.utils.embedding_functions as ef
 
-db = chromadb.PersistentClient(path="./chroma_db")
+db = chromadb.PersistentClient(path="../chroma_db")
 memories = db.get_or_create_collection("my_facts")
 memories.upsert(
     documents=[
