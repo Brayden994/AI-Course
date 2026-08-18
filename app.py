@@ -3,31 +3,60 @@ import os
 from dotenv import load_dotenv
 from openai import OpenAI
 import chromadb
-import numpy as np
-import chromadb.utils.embedding_functions as ef
+import uuid
+
 chatContext = []
 chatContextStr = ""
+
 st.title("Talk to an AI")
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
 db = chromadb.PersistentClient(path="../chroma_db")
 memories = db.get_or_create_collection("my_facts")
-def add_memory(memories, information):
-    memories.upsert(
-        documents=[
-            information
-        ],
-        ids = [f"Fact{memories.count()+1}"]
+
+def add_memory(information):
+    memories.add(
+        documents=[information],
+        ids=[str(uuid.uuid4())]
     )
 
-add_memory(memories, "I like to play the piano")
+if memories.count() == 0:
+    add_memory("I like to play the piano")
+
+if "chatContext" not in st.session_state:
+    st.session_state.chatContext = []
+
 load_dotenv()
+
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+
+        if message["role"] == "assistant" and "thinking" in message:
+            thinking = st.expander("Thinking...")
+            thinking.write(message["thinking"])
+
+        st.write(message["content"])
+
 question = st.chat_input("Ask anything...")
+
 if question:
 
-    all_memories = memories.get(include=["documents"])
-    notes = "\n".join(all_memories["documents"])
+    st.session_state.messages.append({
+        "role": "user",
+        "content": question
+    })
 
-    chatContextStr = " ".join(chatContext)
+    results = memories.query(
+        query_texts=[question],
+        n_results=min(5, memories.count())
+    )
+
+    notes = "\n".join(results["documents"][0])
+
+    chatContextStr = " ".join(st.session_state.chatContext)
+
     prompt = (
         f"Using these notes about the user: {notes} "
         f"and this conversation context (if any): {chatContextStr} "
@@ -37,42 +66,65 @@ if question:
         f"append exactly what should be added at the end of your response, "
         f"after a single '#' symbol. "
         f"Only use '#' for storing memories. "
-        f"Memories must be short, simple facts about the user, no longer than one sentence "
-        f"(e.g., 'user can play the piano'). "
+        f"Memories must be short, simple facts about the user, no longer than one sentence. "
         f"After that memory, add another '#' and include any important conversation context "
-        f"that should be saved. This context can be more detailed but must not duplicate of"
-        f"existing information. Please do your best to find something to add to context, even if it's just what the user asked."
-        f"If there is nothing to add for either section, still include the '#' symbols "
-        f"with a blank space after each."
+        f"that should be saved. "
+        f"If there is nothing to add for either section, still include the '#' symbols."
     )
+
     client = OpenAI(
-    base_url="https://api.groq.com/openai/v1",
-    api_key=os.getenv("GITHUB_TOKEN"),
+        base_url="https://api.groq.com/openai/v1",
+        api_key=os.getenv("GITHUB_TOKEN"),
     )
-    r = client.chat.completions.create(
-    model="openai/gpt-oss-120b",
 
-    messages=[{"role": "user", "content": prompt}]
+    stream = client.chat.completions.create(
+        model="openai/gpt-oss-120b",
+        messages=[{"role": "user", "content": prompt}],
+        stream=True
     )
-    # print(r) # uncomment to see the whole messy responsse
-    answer = r.choices[0].message.content
-    parts = answer.split("#")
-    while len(parts) < 3:
-        parts.append("")
 
-    response = parts[0].strip()
-    new_memory = parts[1].strip()
-    new_context = parts[2].strip()
+    with st.chat_message("assistant"):
+        thinking = st.expander("Thinking...")
+        thinkingArea = thinking.empty()
 
-    if new_memory:
-        add_memory(memories, new_memory)
+        fullThinking = ""
+        fullText = ""
 
-    if new_context:
-        chatContext.append(new_context)
+        for chunk in stream:
+            if chunk.choices:
+                delta = chunk.choices[0].delta
 
-    with st.chat_message("You: "):
-        st.write(question)
+                reasoning = getattr(delta, "reasoning", None)
+                content = getattr(delta, "content", None)
 
-    with st.chat_message("AI: "):
-        st.write(f"{response} {chatContextStr}")
+                if reasoning:
+                    fullThinking += reasoning
+                    thinkingArea.write(fullThinking)
 
+                if content:
+                    fullText += content
+
+        parts = fullText.split("#")
+
+        while len(parts) < 3:
+            parts.append("")
+
+        response = parts[0].strip()
+        new_memory = parts[1].strip()
+        new_context = parts[2].strip()
+
+        if new_memory:
+            add_memory(new_memory)
+
+        if new_context:
+            st.session_state.chatContext.append(new_context)
+
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": response,
+            "thinking": fullThinking
+        })
+
+        st.write(response)
+
+    st.rerun()
