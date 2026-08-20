@@ -90,6 +90,7 @@ with st.sidebar:
     creativity = st.slider("Creativity", 0, 10, 5)
     numOfMemories = st.slider("Number of Memories", 0, 5, 2)
     mood = st.slider("Mood", 0.0, 1.0, 0.5)
+    messageHistoryNum = st.slider("Message History Number", 0, 10, 5)
     if st.button("Clear Chat"):
         st.session_state.messages = []
         st.rerun()
@@ -141,7 +142,7 @@ if question and prompt:
     )
     client = OpenAI(
         base_url="https://api.groq.com/openai/v1",
-        api_key=os.getenv("GITHUB_TOKEN"),
+        api_key=os.getenv("GITHUB_TOKEN") or st.secrects("GITHUB_TOKEN"),
     )
 
     apiHistory = [
@@ -151,7 +152,7 @@ if question and prompt:
 
     stream = client.chat.completions.create(
         model="openai/gpt-oss-120b",
-        messages=apiHistory[:-1] + [{"role": "user", "content": prompt}],
+        messages=apiHistory[-(messageHistoryNum+1):-1] + [{"role": "user", "content": prompt}],
         temperature=mood,
         stream=True
     )
