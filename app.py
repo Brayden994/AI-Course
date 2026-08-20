@@ -140,6 +140,8 @@ if question and prompt:
         f"step by step, making sure they are good before moving on."
         f"this is very important; only one step per response"
         f"and only start the step by step guide once they ask for help."
+        f"If questions get too off topic, you can reject what they said and"
+        f"remind them your purpose, keep in mind, normal greetings are fine "
     )
     client = OpenAI(
         base_url="https://api.groq.com/openai/v1",
