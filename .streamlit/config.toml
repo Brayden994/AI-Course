@@ -1,0 +1,12 @@
+[theme]
+base = "dark"
+primaryColor = "#ADD8E6"
+textColor = "#598BEF"
+baseRadius = "full"
+font = "serif"
+
+[[theme.fontFaces]]
+family = "MyFont"
+url = "https://fonts.googleapis.com/css2?family=Romanesco&display=swap"
+weight = 400
+style = "normal"

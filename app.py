@@ -7,7 +7,18 @@ import uuid
 from pypdf import PdfReader
 from doc_helper import read_file
 
-st.title("Talk to an AI")
+st.html("""
+<style>
+  [data-testid="stChatMessage"] {
+    background-color: transparent;
+    border-radius: 18px;
+    padding: 10px 16px;
+  }
+</style>
+""")
+
+st.title("Start a Buisness")
+st.sidebar.header("Settings")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -29,6 +40,7 @@ def chunkIt(text, size=400):
     if current.strip():
         chunks.append(current.strip())
     return chunks
+
 def storeDocument(file):
     text = read_file(file)
     chunks = chunkIt(text)
@@ -48,6 +60,13 @@ def add_memory(information):
         ids=[str(uuid.uuid4())]
     )
 
+def storeConversation(prompt, answer):
+    text = f"Q: {prompt} A: {answer}"
+    chunks = chunkIt(text)
+    for chunk in chunks:
+        add_memory(chunk)
+
+
 load_dotenv()
 
 for message in st.session_state.messages:
@@ -57,16 +76,7 @@ for message in st.session_state.messages:
             thinking.write(message["thinking"])
         st.write(message["content"])
 
-with st.sidebar:
-    if st.button("Clear Chat"):
-        st.session_state.messages = []
-        st.rerun()
-    if st.button("Clear Documents"):
-        db.delete_collection("docs")
-        st.rerun()
-    if st.button("Clear Memories"):
-        db.delete_collection("my_facts")
-        st.rerun()
+
 
 question = st.chat_input("Ask anything...", accept_file = True, file_type=["pdf", "txt"])
 
@@ -76,6 +86,24 @@ if question:
         n = storeDocument(question.files[0])
         st.success(f"Stored {question.files[0].name} as {n} chunks")
 
+with st.sidebar:
+    creativity = st.slider("Creativity", 0, 10, 5)
+    numOfMemories = st.slider("Number of Memories", 0, 5, 2)
+    mood = st.slider("Mood", 0.0, 1.0, 0.5)
+    if st.button("Clear Chat"):
+        st.session_state.messages = []
+        st.rerun()
+    if st.button("Clear Documents"):
+        db.delete_collection("docs")
+        st.rerun()
+    if st.button("Clear Memories"):
+        db.delete_collection("my_facts")
+        st.rerun()
+    st.caption("Current Model: openai/gpt-oss-120b")
+    st.caption(f"Number of memories: {memories.count()}")
+    st.caption(f"Number of document chunks: {brain.count()}")
+
+
 if question and prompt:
 
     st.session_state.messages.append({"role":"user", "content":prompt})
@@ -83,7 +111,7 @@ if question and prompt:
     if memories.count() > 0:
         results = memories.query(
             query_texts=[question.text],
-            n_results=min(5, memories.count())
+            n_results = max(1, numOfMemories)
         )
         notes = "\n".join(results["documents"][0])
     else:
@@ -98,14 +126,18 @@ if question and prompt:
     prompt = (
         f"Using these notes about the user: {notes}, "
         f"and if applicable, this related document: {document} "
-        f"answer the user's prompt: {prompt}. "
-        f"If the user provides new information that should be added to your notes, "
-        f"append exactly what should be added at the end of your response, "
-        f"after a single '#' symbol. "
-        f"Only use '#' for storing memories. "
-        f"Memories must be short, simple facts about the user, no longer than one sentence. but they mut be important, "
-        f"please use memories sparingly only store important personal details, no chat information."
-        f"If there is nothing to add for the memories, still include the '#' symbol. "
+        f"answer the user's prompt: {question.text}. "
+        f"keep in mind these personality settings,"
+        f"your creativity is on a scale from 0 to 10: {creativity}"
+        
+        f"Your goal is to help the user start a buissness"
+        f"if they ask questions related to that, please help "
+        f"them to the best of your ability, you can give them ideas"
+        f"answer logistics questions, help them with budgeting, ect."
+        f"try to keep answers on the short side, go though with the user"
+        f"step by step, making sure they are good before moving on."
+        f"this is very important; only one step per response"
+        f"and only start the step by step guide once they ask for help."
     )
     client = OpenAI(
         base_url="https://api.groq.com/openai/v1",
@@ -120,6 +152,7 @@ if question and prompt:
     stream = client.chat.completions.create(
         model="openai/gpt-oss-120b",
         messages=apiHistory[:-1] + [{"role": "user", "content": prompt}],
+        temperature=mood,
         stream=True
     )
 
@@ -138,21 +171,13 @@ if question and prompt:
                     fullThinking += reasoning
                 if content:
                     fullText += content
-        parts = fullText.rsplit("#", 1)
 
-        while len(parts) < 2:
-            parts.append("")
+        storeConversation(question.text, fullText)
 
-        response = parts[0].strip()
-        new_memory = parts[1].strip()
-
-        if new_memory:
-            add_memory(new_memory)
         st.session_state.messages.append({
             "role": "assistant",
-            "content": response,
+            "content": fullText,
             "thinking": fullThinking
         })
-        responseArea.write(response)
-
+        responseArea.write(fullText)
     st.rerun()
