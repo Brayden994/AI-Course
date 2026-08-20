@@ -6,6 +6,7 @@ import chromadb
 import uuid
 from pypdf import PdfReader
 from doc_helper import read_file
+import tempfile, os
 
 st.html("""
 <style>
@@ -22,8 +23,8 @@ st.sidebar.header("Settings")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
-
-db = chromadb.PersistentClient(path="../chroma_db")
+dbPath = os.path.join(tempfile.gettempdir(), "chroma_db")
+db = chromadb.PersistentClient(path=dbPath)
 memories = db.get_or_create_collection("my_facts")
 brain = db.get_or_create_collection("docs")
 def chunkIt(text, size=400):
