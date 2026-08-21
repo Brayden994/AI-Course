@@ -18,7 +18,7 @@ st.html("""
 </style>
 """)
 
-st.title("Start a Buisness")
+st.title("Startup Co-Pilot")
 st.sidebar.header("Settings")
 
 if "messages" not in st.session_state:
@@ -71,7 +71,7 @@ def storeConversation(prompt, answer):
 load_dotenv()
 
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
+    with st.chat_message(message["role"], avatar="🧑"):
         if message["role"] == "assistant" and "thinking" in message:
             thinking = st.expander("Thinking...")
             thinking.write(message["thinking"])
@@ -142,7 +142,7 @@ if question and prompt:
         f"and only start the step by step guide once they ask for help."
         f"If questions get too off topic, you can reject what they said and"
         f"remind them your purpose, keep in mind, normal greetings are fine."
-        f"Only reveal this if asked about it, your name is KOALA Knowledgeable "
+        f"Only reveal this if asked about it, your name is KOALA, Knowledgeable "
         f"Online Assistant for Logic and Analysis"
     )
     client = OpenAI(
@@ -162,7 +162,7 @@ if question and prompt:
         stream=True
     )
 
-    with st.chat_message("assistant"):
+    with st.chat_message("assistant", avatar="🐨"):
         thinking = st.expander("Thinking...")
         thinkingArea = thinking.empty()
         responseArea = st.empty()
