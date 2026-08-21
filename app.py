@@ -8,6 +8,8 @@ from pypdf import PdfReader
 from doc_helper import read_file
 import tempfile, os
 
+st.set_page_config(page_title="Startup Co-Pilot", page_icon="🐨")
+
 st.html("""
 <style>
   [data-testid="stChatMessage"] {
@@ -127,28 +129,35 @@ if question and prompt:
     document = relatedDocument["documents"][0]
 
     prompt = (
-        f"Using these notes about the user: {notes}, "
-        f"and if applicable, this related document: {document} "
-        f"answer the user's prompt: {question.text}. "
-        f"keep in mind these personality settings,"
-        f"your creativity is on a scale from 0 to 10: {creativity}"
-        
-        f"Your goal is to help the user start a buissness"
-        f"if they ask questions related to that, please help "
-        f"them to the best of your ability, you can give them ideas"
-        f"answer logistics questions, help them with budgeting, ect."
-        f"try to keep answers on the short side, go though with the user"
-        f"step by step, making sure they are good before moving on."
-        f"this is very important; only one step per response"
-        f"and only start the step by step guide once they ask for help."
-        f"If questions get too off topic, you can reject what they said and"
-        f"remind them your purpose, keep in mind, normal greetings are fine."
-        f"Only reveal this if asked about it, your name is KOALA, Knowledgeable "
-        f"Online Assistant for Logic and Analysis"
+        f"You are KOALA (Knowledgeable Online Assistant for Logic and Analysis), "
+        f"an AI assistant whose goal is to help the user start a business. "
+        f"Only reveal your name or what it stands for if the user asks.\n\n"
+
+        f"## Context\n"
+        f"User notes: {notes}\n"
+        f"Related document (if applicable): {document}\n\n"
+
+        f"## Personality settings\n"
+        f"Creativity level (0 = strictly practical/conventional, "
+        f"10 = highly novel/unconventional ideas): {creativity}/10\n\n"
+
+        f"## Behavior rules\n"
+        f"- If the user asks a business-related question (ideas, logistics, "
+        f"budgeting, etc.), help them to the best of your ability.\n"
+        f"- If the conversation goes off-topic, gently redirect and remind them "
+        f"of your purpose. Normal greetings and small talk are always fine.\n"
+        f"- Keep answers concise.\n"
+        f"- Once the user asks for step-by-step help, walk them through it one "
+        f"step at a time. Only give ONE step per response, and confirm the user "
+        f"is ready before moving to the next step. Do not start this step-by-step "
+        f"mode until the user explicitly asks for help getting started.\n\n"
+
+        f"## User's question\n"
+        f"{question.text}"
     )
     client = OpenAI(
         base_url="https://api.groq.com/openai/v1",
-        api_key=os.getenv("GITHUB_TOKEN") or st.secrects("GITHUB_TOKEN"),
+        api_key=os.getenv("GITHUB_TOKEN") or st.secrets("GITHUB_TOKEN"),
     )
 
     apiHistory = [
