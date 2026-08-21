@@ -69,9 +69,10 @@ def storeConversation(prompt, answer):
 
 
 load_dotenv()
+avatars = {"assistant": "🐨", "user": "🧑"}
 
 for message in st.session_state.messages:
-    with st.chat_message(message["role"], avatar="🧑"):
+    with st.chat_message(message["role"], avatar=avatars[message["role"]]):
         if message["role"] == "assistant" and "thinking" in message:
             thinking = st.expander("Thinking...")
             thinking.write(message["thinking"])
