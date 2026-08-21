@@ -171,6 +171,8 @@ if question and prompt:
         temperature=mood,
         stream=True
     )
+    with st.chat_message("user", avatar="🧑"):
+        st.write(question.text)
 
     with st.chat_message("assistant", avatar="🐨"):
         thinking = st.expander("Thinking...")
