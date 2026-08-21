@@ -155,6 +155,10 @@ if question and prompt:
         f"## User's question\n"
         f"{question.text}"
     )
+
+    with st.chat_message("user", avatar="🧑"):
+        st.write(question.text)
+
     client = OpenAI(
         base_url="https://api.groq.com/openai/v1",
         api_key=os.getenv("GITHUB_TOKEN") or st.secrets("GITHUB_TOKEN"),
@@ -171,8 +175,7 @@ if question and prompt:
         temperature=mood,
         stream=True
     )
-    with st.chat_message("user", avatar="🧑"):
-        st.write(question.text)
+
 
     with st.chat_message("assistant", avatar="🐨"):
         thinking = st.expander("Thinking...")
